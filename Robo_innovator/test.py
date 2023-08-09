@@ -1,5 +1,5 @@
-import cv2
 import numpy as np
+import cv2
 import pytesseract
 
 def binarycheck(img):
@@ -62,8 +62,6 @@ def shape_check(img):
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     i = 0
-    cv2.imshow('e',img)
-    cv2.waitKey(0)
     # list for storing names of shapes
     for contour in contours:
     
@@ -104,10 +102,13 @@ def shape_check(img):
         
 def text_check(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray_blurred = cv2.blur(gray, (2, 2))
+    erd = cv2.erode(gray,None,iterations=1)
+    gray_blurred = cv2.blur(erd, (5, 5))
     _, threshold = cv2.threshold(gray_blurred, 90, 255, cv2.THRESH_BINARY)
-    text = pytesseract.image_to_string(threshold,lang='eng', config='--psm 6 outputbase digits')
-    return text[0]
+    text = pytesseract.image_to_string(threshold,lang='eng', config='--psm 10 tessedit_char_whitelist=0123456789')
+    if len(text) :
+        return text[0]
+    return None
 # --psm 10 tessedit_char_whitelist=0123456789
 
 def sort_order(first_row, second_row,third_row):
@@ -131,7 +132,7 @@ def find_largest_rectangle(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Step 2: Apply edge detection (using Canny)
-    edges = cv2.Canny(gray_image, 50, 150, apertureSize=3)
+    edges = cv2.Canny(gray_image, 220, 255, apertureSize=3)
 
     # Step 3: Find contours in the edge-detected image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -147,15 +148,16 @@ def find_largest_rectangle(image):
                 filtered_contours.append(approx)
 
     # Step 5: Find the largest rectangle among the filtered contours
+    if len(filtered_contours) == 0 :
+        return image
     largest_rectangle = max(filtered_contours, key=cv2.contourArea)
 
     # Step 6: Draw the largest rectangle on a copy of the original image
     image_with_rectangle = image.copy()
-    cv2.drawContours(image_with_rectangle, [largest_rectangle], 0, (0, 255, 0), 2)
-
+    cv2.drawContours(image, [largest_rectangle], 0, (0, 255, 0), 2)
     x, y, w, h = cv2.boundingRect(largest_rectangle)
-    cropped_image = image[y:y+h, x:x+w]
-    return cropped_image
+    cv2.rectangle(image,(x,y),(x+w,y+h),(255,0,0),3)
+    return image[y:y+h, x:x+w]
 
 def filter_blue(img):
     lower_blue = np.array([106, 123, 0])
@@ -166,17 +168,33 @@ def filter_blue(img):
     return blue_filtered_image
 
 def main():
+    cap = cv2.VideoCapture(0)
     pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+    while cap.isOpened():
+        ret, frame = cap.read()
+        # if frame is read correctly ret is True
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
+        # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        image = find_largest_rectangle(frame)
+        cv2.imshow('frame', image)
+        if cv2.waitKey(1) == ord('s'):
+            break
+        if cv2.waitKey(1) == ord('q'):
+            scale_factor = 2
+            new_width = image.shape[1] * scale_factor
+            new_height = image.shape[0] * scale_factor
+            new_dimensions = (new_width, new_height)
+            enlarged_image = cv2.resize(image, new_dimensions, interpolation=cv2.INTER_LINEAR)
+            first_row, second_row, third_row = segment_image(enlarged_image)
+            # sorted_list1, sorted_list2,sorted_list3,index_sorted = sort_order(first_row,second_row,third_row)
+            for i in range(5):
+                print(binarycheck(first_row[i]),shape_check(second_row[i]),text_check(third_row[i]))
+            cv2.imshow('t',enlarged_image)
+            cv2.waitKey(0)
+    cap.release()
+    cv2.destroyAllWindows()
 
-    img = cv2.imread("images/raw2.png")
-    cropped = find_largest_rectangle(img)
-    # cv2.imshow('test',cropped)
-    first_row, second_row, third_row = segment_image(cropped)
-    sorted_list1, sorted_list2,sorted_list3,index_sorted = sort_order(first_row,second_row,third_row)
-    for i in range(5):
-        # print(text_check(third_row[i]),shape_check(second_row[i]),binarycheck(first_row[i]))
-        print(binarycheck(first_row[i]))
-    # cv2.waitKey(0)
-
-if __name__=="__main__":
+if __name__ == '__main__': 
     main()
