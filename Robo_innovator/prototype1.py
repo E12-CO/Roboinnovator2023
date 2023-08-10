@@ -47,65 +47,18 @@ def binarycheck(img):
         binarymapKeys.sort()
         num1 = binarymap[binarymapKeys[0]]
         num2 = binarymap[binarymapKeys[1]]
-        num3 = binarymap[binarymapKeys[2]]
+        if len(binarymapKeys) == 2 :
+            num3 = 0
+        else :
+            num3 = binarymap[binarymapKeys[2]]
         return num1*4 + num2*2 + num3*1
-
-def shape_check(img):
-    # converting image into grayscale image
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    # setting threshold of gray image
-    _, threshold = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-    
-    # using a findContours() function
-    contours, _ = cv2.findContours(
-        threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    i = 0
-    # list for storing names of shapes
-    for contour in contours:
-    
-        # here we are ignoring first counter because 
-        # findcontour function detects whole image as shape
-        if cv2.contourArea(contour) < 1000 or cv2.contourArea(contour) > 10000:
-            continue 
-    
-        #print(cv2.contourArea(contour))
-        # cv2.approxPloyDP() function to approximate the shape
-        approx = cv2.approxPolyDP(
-            contour, 0.01 * cv2.arcLength(contour, True), True)
-        
-        # using drawContours() function
-        cv2.drawContours(img, [contour], 0, (0, 0, 255), 5)
-        area = cv2.contourArea(contour)
-        # finding center point of shape
-        M = cv2.moments(contour)
-        if M['m00'] != 0.0:
-            x = int(M['m10']/M['m00'])
-            y = int(M['m01']/M['m00'])
-    
-        #print(len(approx))
-        # putting shape name at center of each shape
-        if len(approx) == 3:
-            return "Triangle",area
-    
-        elif len(approx) == 4:
-            return "Rectangle",area
-    
-        elif len(approx) == 5:
-            return "Pentagon",area
-     
-        elif len(approx) == 12: #To fix
-            return "X",area
-        else:
-            return "Circle",area
-        
 def text_check(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     erd = cv2.erode(gray,None,iterations=1)
     gray_blurred = cv2.blur(erd, (5, 5))
-    _, threshold = cv2.threshold(gray_blurred, 90, 255, cv2.THRESH_BINARY)
-    text = pytesseract.image_to_string(threshold,lang='eng', config='--psm 10 tessedit_char_whitelist=0123456789')
+    _, threshold = cv2.threshold(gray_blurred, 130, 255, cv2.THRESH_BINARY)
+    text = pytesseract.image_to_string(threshold,lang='eng', config='--psm 6 outputbase digits')
     if len(text) :
         return text[0]
     return None
@@ -160,39 +113,95 @@ def find_largest_rectangle(image):
     return image[y:y+h, x:x+w]
 
 def filter_blue(img):
-    lower_blue = np.array([106, 123, 0])
-    upper_blue = np.array([118, 255, 255])
+    lower_blue = np.array([30, 40, 80])
+    upper_blue = np.array([179, 255, 204])
     hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     blue_mask = cv2.inRange(hsv_image, lower_blue, upper_blue)
     blue_filtered_image = cv2.bitwise_and(img, img, mask=blue_mask)
     return blue_filtered_image
 
+def Area(img):
+    # converting image into grayscale image
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # setting threshold of gray image
+    _, threshold = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+    
+    # using a findContours() function
+    contours, _ = cv2.findContours(
+        threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    i = 0
+    # list for storing names of shapes
+    for contour in contours:
+    
+        # here we are ignoring first counter because 
+        # findcontour function detects whole image as shape
+        if cv2.contourArea(contour) < 500 or cv2.contourArea(contour) > 10000:
+            continue 
+    
+        #print(cv2.contourArea(contour))
+        # cv2.approxPloyDP() function to approximate the shapes
+        approx = cv2.approxPolyDP(
+            contour, 0.01 * cv2.arcLength(contour, True), True)
+        
+        # using drawContours() function
+        cv2.drawContours(img, [contour], 0, (0, 0, 255), 5)
+        area = cv2.contourArea(contour)
+        # finding center point of shape
+        M = cv2.moments(contour)
+        if M['m00'] != 0.0:
+            x = int(M['m10']/M['m00'])
+            y = int(M['m01']/M['m00'])
+        return int(area)
+    return int(0)
+
+def classify_shape(image_list):
+    image_raw = image_list.copy()
+    image_list.sort()
+    result = []
+    for i in range(5):
+        if image_list.index(image_raw[i]) == 0 :
+            result.append("X")
+        elif image_list.index(image_raw[i]) == 1:
+            result.append("Triangle")
+        elif image_list.index(image_raw[i]) == 3:
+            result.append("Pentagon")
+        elif image_list.index(image_raw[i]) == 2:
+            result.append("Circle")
+        elif image_list.index(image_raw[i]) == 4:
+            result.append("Rectangle")
+    return (result)
 def main():
     cap = cv2.VideoCapture(0)
     pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
     while cap.isOpened():
         ret, frame = cap.read()
-        # if frame is read correctly ret is True
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break
-        # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         image = find_largest_rectangle(frame)
-        cv2.imshow('frame', image)
-        if cv2.waitKey(1) == ord('s'):
+        store_shape = []
+        store_numbers = []
+        store_binary = []
+        cv2.imshow('frame',image)
+        if cv2.waitKey(5) == ord('s'):
             break
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(5) == ord('q'):
             scale_factor = 2
             new_width = image.shape[1] * scale_factor
             new_height = image.shape[0] * scale_factor
             new_dimensions = (new_width, new_height)
             enlarged_image = cv2.resize(image, new_dimensions, interpolation=cv2.INTER_LINEAR)
             first_row, second_row, third_row = segment_image(enlarged_image)
-            # sorted_list1, sorted_list2,sorted_list3,index_sorted = sort_order(first_row,second_row,third_row)
+            sorted_list1, sorted_list2,sorted_list3,index_sorted = sort_order(first_row,second_row,third_row)
             for i in range(5):
-                print(binarycheck(first_row[i]),shape_check(second_row[i]),text_check(third_row[i]))
-            cv2.imshow('t',enlarged_image)
-            cv2.waitKey(0)
+                store_shape.append(Area(sorted_list2[i]))
+                store_numbers.append(text_check(sorted_list3[i]))
+                store_binary.append(binarycheck(sorted_list1[i]))
+            result = classify_shape(store_shape)
+            for i in range(5):
+                print(store_binary[i],result[i],store_numbers[i])
     cap.release()
     cv2.destroyAllWindows()
 
