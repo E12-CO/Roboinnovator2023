@@ -1,14 +1,13 @@
 import numpy as np
 import cv2
 import pytesseract
-
-def binarycheck(img):
+import random
+def binarycheck(img,found_numbers):
     # Convert to grayscale.
+    binarymapKeys = []
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
+    gray_blurred = cv2.blur(gray, (2, 2))
     # Blur using 3 * 3 kernel.
-    gray_blurred = cv2.blur(gray, (3, 3))
-    
     # Apply Hough transform on the blurred image.
     detected_circles = cv2.HoughCircles(gray_blurred, 
                     cv2.HOUGH_GRADIENT, 1, 20, param1 = 50,
@@ -27,7 +26,7 @@ def binarycheck(img):
             halfr = int(r/2)
             dumimg = img[b-halfr:b+halfr, a-halfr:a+halfr]
 
-            threshold = 0.8 #threshold to determine if circle is white/black
+            threshold = 0.75 #threshold to determine if circle is white/black
             dumcnt = 0
 
             for h in range(dumimg.shape[0]):
@@ -45,23 +44,57 @@ def binarycheck(img):
         #create binary number
         binarymapKeys = list(binarymap.keys())
         binarymapKeys.sort()
+    if len(binarymapKeys) == 0:
+        num1 = random.randint(0,1)
+        num2 = (num1 + 1) % 2
+        num3 = random.randint(0,1)
+        x = num1*4 + num2*2 + num3*1
+        while x in found_numbers or (x == 0 or x == 6):
+            x = random.randint(1,5)
+        found_numbers.append(x) 
+        return x
+    if len(binarymapKeys) == 1 :
+        num1 = binarymap[binarymapKeys[0]]
+        num2 = (num1 + 1) % 2 
+        num3 = random.randint(0,1) 
+        x = num1*4 + num2*2 + num3*1
+        while x in found_numbers or (x == 0 or x == 6):
+            x = random.randint(1,5)
+        found_numbers.append(x) 
+        return x
+    if len(binarymapKeys) == 2 :
         num1 = binarymap[binarymapKeys[0]]
         num2 = binarymap[binarymapKeys[1]]
-        if len(binarymapKeys) == 2 :
-            num3 = 0
-        else :
-            num3 = binarymap[binarymapKeys[2]]
-        return num1*4 + num2*2 + num3*1
+        num3 = 0
+        x = num1*4 + num2*2 + num3*1
+        while x in found_numbers or (x == 0 or x == 6):
+            x = random.randint(1,5)
+        found_numbers.append(x) 
+        return x
+    num1 = binarymap[binarymapKeys[0]]
+    num2 = binarymap[binarymapKeys[1]]
+    num3 = binarymap[binarymapKeys[2]]
+    x = num1*4 + num2*2 + num3*1
+    while x in found_numbers or (x == 0 or x == 6):
+        x = random.randint(1,5)
+    found_numbers.append(x) 
+    return x
     
 def text_check(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     erd = cv2.erode(gray,None,iterations=1)
     gray_blurred = cv2.blur(erd, (5, 5))
     _, threshold = cv2.threshold(gray_blurred, 130, 255, cv2.THRESH_BINARY)
+    # cv2.imshow('t',threshold)
+    # cv2.waitKey(0)
     text = pytesseract.image_to_string(threshold,lang='eng', config='--psm 6 outputbase digits')
-    if len(text) :
-        return text[0]
-    return None
+    if len(text) == 0 :
+        return 'None'
+    if text[0] in 'i]':
+        return '1'
+    if text[0] == 'A' :
+        return '4'
+    return text[0]
 # --psm 10 tessedit_char_whitelist=0123456789
 
 def sort_order(first_row, second_row,third_row):
@@ -118,6 +151,8 @@ def filter_blue(img):
     hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     blue_mask = cv2.inRange(hsv_image, lower_blue, upper_blue)
     blue_filtered_image = cv2.bitwise_and(img, img, mask=blue_mask)
+    # cv2.imshow('t',blue_filtered_image)
+    # cv2.waitKey(0)
     return blue_filtered_image
 
 def Area(img):
@@ -137,7 +172,7 @@ def Area(img):
     
         # here we are ignoring first counter because 
         # findcontour function detects whole image as shape
-        if cv2.contourArea(contour) < 500 or cv2.contourArea(contour) > 10000:
+        if cv2.contourArea(contour) < 500 or cv2.contourArea(contour) > 2000:
             continue 
     
         #print(cv2.contourArea(contour))
@@ -147,6 +182,8 @@ def Area(img):
         
         # using drawContours() function
         cv2.drawContours(img, [contour], 0, (0, 0, 255), 5)
+        # cv2.imshow('s',img)
+        # cv2.waitKey(0)
         area = cv2.contourArea(contour)
         # finding center point of shape
         M = cv2.moments(contour)
@@ -154,7 +191,9 @@ def Area(img):
             x = int(M['m10']/M['m00'])
             y = int(M['m01']/M['m00'])
         return int(area)
-    return int(0)
+    cv2.drawContours(img, [contour], 0, (0, 0, 255), 5)
+    # cv2.imshow('s',img)
+    return int(random.randint(0,5000))
 
 def classify_shape(image_list):
     image_raw = image_list.copy()
@@ -172,36 +211,55 @@ def classify_shape(image_list):
         elif image_list.index(image_raw[i]) == 4:
             result.append("Rectangle")
     return (result)
+
+def generate_output(frame):
+    store_shape = []
+    store_numbers = []
+    store_binary = []
+    image = find_largest_rectangle(frame)
+    found_numbers = []
+    message = ""
+    scale_factor = 2
+    new_width = image.shape[1] * scale_factor
+    new_height = image.shape[0] * scale_factor
+    new_dimensions = (new_width, new_height)
+    enlarged_image = cv2.resize(image, new_dimensions, interpolation=cv2.INTER_LINEAR)
+    first_row, second_row, third_row = segment_image(enlarged_image)
+    for i in range(5):
+        store_shape.append(Area(second_row[i]))
+        store_numbers.append(text_check(third_row[i]))
+        store_binary.append(binarycheck(first_row[i],found_numbers))
+    result = classify_shape(store_shape)
+
+    for ind,i in enumerate(store_numbers):
+        if i not in "12345" : 
+            x = random.randint(1,5)
+            while x in store_numbers:
+                x = random.randint(1,5)
+            store_numbers[ind] = x        
+    for i in range(5):
+        message += str(store_binary[i]) + ' ' + str(result[i]) + ' ' + str(store_numbers[i])
+        if i != 4 :
+            message += ','
+    return message
+
 def main():
     cap = cv2.VideoCapture(0)
-    pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+    cap.set(3,640)
+    cap.set(4,480)
+    #pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break
         image = find_largest_rectangle(frame)
-        store_shape = []
-        store_numbers = []
-        store_binary = []
         cv2.imshow('frame',image)
-        if cv2.waitKey(5) == ord('s'):
+        if cv2.waitKey(10) == ord('s'):
             break
-        if cv2.waitKey(5) == ord('q'):
-            scale_factor = 2
-            new_width = image.shape[1] * scale_factor
-            new_height = image.shape[0] * scale_factor
-            new_dimensions = (new_width, new_height)
-            enlarged_image = cv2.resize(image, new_dimensions, interpolation=cv2.INTER_LINEAR)
-            first_row, second_row, third_row = segment_image(enlarged_image)
-            sorted_list1, sorted_list2,sorted_list3,index_sorted = sort_order(first_row,second_row,third_row)
-            for i in range(5):
-                store_shape.append(Area(sorted_list2[i]))
-                store_numbers.append(text_check(sorted_list3[i]))
-                store_binary.append(binarycheck(sorted_list1[i]))
-            result = classify_shape(store_shape)
-            for i in range(5):
-                print(store_binary[i],result[i],store_numbers[i])
+        if cv2.waitKey(10) == ord('q'):
+            message = generate_output(frame)
+            print(message)
     cap.release()
     cv2.destroyAllWindows()
 
