@@ -131,11 +131,11 @@ def find_largest_rectangle(image,images,area_largest,epsilon_largest,canny_large
     images[1] = edges
     # Step 3: Find contours in the edge-detected image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+    area = 0
     # Step 4: Filter contours based on area and approximate them as polygons
     filtered_contours = []
     for contour in contours:
-        area = cv2.contourArea(contour)
+        area = max(cv2.contourArea(contour),area)
         if area > area_largest:  # Filter based on the contour area (adjust this threshold as needed)
             epsilon = epsilon_largest/100 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
@@ -146,11 +146,11 @@ def find_largest_rectangle(image,images,area_largest,epsilon_largest,canny_large
     if len(filtered_contours) == 0 :
         return image
     largest_rectangle = max(filtered_contours, key=cv2.contourArea)
-
     # Step 6: Draw the largest rectangle on a copy of the original image
     image_with_rectangle = image.copy()
     cv2.drawContours(image, [largest_rectangle], 0, (0, 255, 0), 2)
     x, y, w, h = cv2.boundingRect(largest_rectangle)
+    print(area,w*h)
     cv2.rectangle(image,(x,y),(x+w,y+h),(255,0,0),3)
     images[2] = image
     return image[y:y+h, x:x+w]

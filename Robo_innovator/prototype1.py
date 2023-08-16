@@ -219,12 +219,12 @@ def generate_output(frame):
     image = find_largest_rectangle(frame)
     found_numbers = []
     message = ""
-    scale_factor = 2
-    new_width = image.shape[1] * scale_factor
-    new_height = image.shape[0] * scale_factor
-    new_dimensions = (new_width, new_height)
-    enlarged_image = cv2.resize(image, new_dimensions, interpolation=cv2.INTER_LINEAR)
-    first_row, second_row, third_row = segment_image(enlarged_image)
+    # scale_factor = 2
+    # new_width = image.shape[1] * scale_factor
+    # new_height = image.shape[0] * scale_factor
+    # new_dimensions = (new_width, new_height)
+    # enlarged_image = cv2.resize(image, new_dimensions, interpolation=cv2.INTER_LINEAR)
+    first_row, second_row, third_row = segment_image(image)
     for i in range(5):
         store_shape.append(Area(second_row[i]))
         store_numbers.append(text_check(third_row[i]))
