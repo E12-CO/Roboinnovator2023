@@ -46,5 +46,7 @@ def crop_row_col(cropped_image):
 if __name__ == "__main__":
     image_path = "images/raw2.png"  # Replace with the path to your image
     cropped_image = find_largest_rectangle(image_path)
-    crop_row_col(cropped_image)
+    cv2.imshow('test',cropped_image)
+    cv2.waitKey(0)
+    # crop_row_col(cropped_image)
 
