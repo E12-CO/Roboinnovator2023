@@ -132,7 +132,6 @@ def find_largest_rectangle(image):
             approx = cv2.approxPolyDP(contour, epsilon, True)
             if len(approx) == 4:  # Only consider contours with four vertices (approximating rectangles)
                 filtered_contours.append(approx)
-
     # Step 5: Find the largest rectangle among the filtered contours
     if len(filtered_contours) == 0 :
         return image

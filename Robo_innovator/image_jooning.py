@@ -125,7 +125,7 @@ def find_largest_rectangle(image,images,area_largest,epsilon_largest,canny_large
 
     # Step 1: Read the image and convert it to grayscale
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    images[0] = gray_image
+    images[0] = gray_image 
     # Step 2: Apply edge detection (using Canny)
     edges = cv2.Canny(gray_image, canny2_largest,canny_largest, apertureSize=3)
     images[1] = edges
