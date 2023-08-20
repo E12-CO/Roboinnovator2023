@@ -148,7 +148,7 @@ def find_largest_rectangle(image,images,area_largest,epsilon_largest,canny_large
     largest_rectangle = max(filtered_contours, key=cv2.contourArea)
     # Step 6: Draw the largest rectangle on a copy of the original image
     image_with_rectangle = image.copy()
-    cv2.drawContours(image, [largest_rectangle], 0, (0, 255, 0), 2)
+    # cv2.drawContours(image, [largest_rectangle], 0, (0, 255, 0), 2)
     x, y, w, h = cv2.boundingRect(largest_rectangle)
     print(area,w*h)
     cv2.rectangle(image,(x,y),(x+w,y+h),(255,0,0),3)
@@ -204,7 +204,7 @@ def main():
     cv2.createTrackbar('indeximage', 'img', 0, 4, nothing)
 
     # largest rectangle
-    cv2.createTrackbar('area_largest', 'img', 0, 20000, nothing)
+    cv2.createTrackbar('area_largest', 'img', 0, 100000, nothing)
     cv2.createTrackbar('epsilon_largest', 'img', 0, 100, nothing)
     cv2.createTrackbar('canny_largest', 'img', 0, 255,nothing)
     cv2.createTrackbar('canny2_largest', 'img', 0, 255,nothing)
@@ -258,7 +258,7 @@ def main():
         erodeiter_text = cv2.getTrackbarPos('erodeiter_text', 'img')
         kernelsize_text = cv2.getTrackbarPos('kernelsize_text', 'img')
         threshold_text = cv2.getTrackbarPos('threshold_text', 'img')
-        image_path = 'images/raw2.png'
+        image_path = 'images/sample0.png'
         image = cv2.imread(image_path)
         images = [0]*12
         canvas = show_tunning(image,images,indeximage,area_largest,epsilon_largest,canny_largest,canny2_largest,kernelsize_bin,minraduis_bin,maxraduis_bin,theshold_area,minArea_area,maxAera_area,erodeiter_text,kernelsize_text,threshold_text)

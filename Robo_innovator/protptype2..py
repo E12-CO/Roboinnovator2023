@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import pytesseract
 import random
+import time as t
 def binarycheck(img,found_numbers):
     # Convert to grayscale.
     binarymapKeys = []
@@ -44,40 +45,12 @@ def binarycheck(img,found_numbers):
         #create binary number
         binarymapKeys = list(binarymap.keys())
         binarymapKeys.sort()
-    if len(binarymapKeys) == 0:
-        num1 = random.randint(0,1)
-        num2 = (num1 + 1) % 2
-        num3 = random.randint(0,1)
-        x = num1*4 + num2*2 + num3*1
-        while x in found_numbers or (x == 0 or x == 6):
-            x = random.randint(1,5)
-        found_numbers.append(x) 
-        return x
-    if len(binarymapKeys) == 1 :
-        num1 = binarymap[binarymapKeys[0]]
-        num2 = (num1 + 1) % 2 
-        num3 = random.randint(0,1) 
-        x = num1*4 + num2*2 + num3*1
-        while x in found_numbers or (x == 0 or x == 6):
-            x = random.randint(1,5)
-        found_numbers.append(x) 
-        return x
-    if len(binarymapKeys) == 2 :
-        num1 = binarymap[binarymapKeys[0]]
-        num2 = binarymap[binarymapKeys[1]]
-        num3 = 0
-        x = num1*4 + num2*2 + num3*1
-        while x in found_numbers or (x == 0 or x == 6):
-            x = random.randint(1,5)
-        found_numbers.append(x) 
-        return x
+    if len(binarymapKeys) != 3 :
+        return None
     num1 = binarymap[binarymapKeys[0]]
     num2 = binarymap[binarymapKeys[1]]
     num3 = binarymap[binarymapKeys[2]]
     x = num1*4 + num2*2 + num3*1
-    while x in found_numbers or (x == 0 or x == 6):
-        x = random.randint(1,5)
-    found_numbers.append(x) 
     return x
     
 def text_check(img):
@@ -85,8 +58,6 @@ def text_check(img):
     erd = cv2.erode(gray,None,iterations=1)
     gray_blurred = cv2.blur(erd, (5, 5))
     _, threshold = cv2.threshold(gray_blurred, 130, 255, cv2.THRESH_BINARY)
-    # cv2.imshow('t',threshold)
-    # cv2.waitKey(0)
     text = pytesseract.image_to_string(threshold,lang='eng', config='--psm 6 outputbase digits')
     if len(text) == 0 :
         return 'None'
@@ -192,7 +163,7 @@ def Area(img):
         return int(area)
     cv2.drawContours(img, [contour], 0, (0, 0, 255), 5)
     # cv2.imshow('s',img)
-    return int(random.randint(0,5000))
+    return -1
 
 def classify_shape(image_list):
     image_raw = image_list.copy()
@@ -228,7 +199,7 @@ def generate_output(frame):
         store_shape.append(Area(second_row[i]))
         store_numbers.append(text_check(third_row[i]))
         store_binary.append(binarycheck(first_row[i],found_numbers))
-    result = classify_shape(store_shape)
+    # result = classify_shape(store_shape)
 
     for ind,i in enumerate(store_numbers):
         if i not in "12345" : 
@@ -237,28 +208,103 @@ def generate_output(frame):
                 x = random.randint(1,5)
             store_numbers[ind] = x        
     for i in range(5):
-        message += str(store_binary[i]) + ' ' + str(result[i]) + ' ' + str(store_numbers[i])
+        message += str(store_binary[i]) + ' ' + str(store_shape[i]) + ' ' + str(store_numbers[i])
         if i != 4 :
             message += ','
     return message
-
+def conclusion_output(samples):
+    outputlist = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+    output = ""
+    bin_first = dict()
+    shape_first = dict()
+    text_first = dict() 
+    bin_second = dict()
+    shape_second = dict()
+    text_second = dict() 
+    bin_third = dict()
+    shape_third = dict()
+    text_third = dict() 
+    bin_forth = dict()
+    shape_forth = dict()
+    text_forth = dict() 
+    bin_fifth = dict()
+    shape_fifth = dict()
+    text_fifth = dict()
+    compare = [[bin_first,shape_first,text_first],[bin_second,shape_second,text_second],[bin_third,shape_third,text_third],[bin_forth,shape_forth,text_forth],[bin_fifth,shape_fifth,text_fifth]] 
+    for sample in samples:
+        tasks = sample.split(',')
+        for ind,task in enumerate(tasks):
+            element = task.split(' ')
+            for i in range(3):
+                if str(element[i]) not in (compare[ind][i]).keys():
+                    (compare[ind][i])[str(element[i])] = 1
+                else :
+                    (compare[ind][i])[str(element[i])] += 1
+    for room in range(len(compare)) : 
+        for task in range(len(compare[room])) : 
+            outputlist[room][task] = [key for key, value in compare[room][task].items() if value == max(compare[room][task].values())][0]
+    store_bin = []
+    store_shape = [int(outputlist[0][1]),int(outputlist[1][1]),int(outputlist[2][1]),int(outputlist[3][1]),int(outputlist[4][1])]
+    store_text = []
+    stored_data = [store_bin,store_shape,store_text]
+    for room in range(len(outputlist)):
+        for task in range(len(outputlist[room])):
+            if outputlist[room][task] not in "12345" and task == 0 :
+                outputlist[room][task] = str(random.randint(1,5))
+                while outputlist[room][task] in stored_data[task] :
+                    outputlist[room][task] = str(random.randint(1,5))
+                store_bin.append(outputlist[room][task])
+            if outputlist[room][task] == '-1' and task == 1 :
+                min_shape = 500
+                max_shape = 1000
+                outputlist[room][task] = str(random.randint(min_shape,max_shape))
+                while int(outputlist[room][task]) in stored_data[task] :
+                    outputlist[room][task] = str(random.randint(min_shape,max_shape))
+                store_shape.append(int(outputlist[room][task]))
+            if (task == 2):
+                if outputlist[room][task] in "12345" and outputlist[room][task] not in stored_data[task]:
+                    store_text.append(outputlist[room][task])
+                    continue
+                else :
+                    outputlist[room][task] = str(random.randint(1,5))
+                    while outputlist[room][task] in stored_data[task] :
+                        outputlist[room][task] = str(random.randint(1,5))
+                    store_text.append(outputlist[room][task])
+    arealist = [int(e) for e in store_shape]
+    while -1 in arealist :
+        arealist.remove(-1)
+    shape = classify_shape(arealist)
+    for i in range(5):
+        outputlist[i][1] = shape[i]
+    for inx,room in enumerate(outputlist):
+        for iny,task in enumerate(outputlist[inx]):
+            output += task
+            if iny != len(outputlist[inx])-1 :
+                output += ' '
+        if inx != len(outputlist)-1 :
+                output += ','
+    return output
 def main():
     cap = cv2.VideoCapture(0)
     cap.set(3,640)
     cap.set(4,480)
+    count = 0
+    time = 0
+    store_sample = []
     pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-    while cap.isOpened():
+    while cap.isOpened() and count < 5:
+        count += 1
+        time = int(round(t.time() * 1000))
+        while int(round(t.time()*1000)) - time < 3000 :
+            pass
         ret, frame = cap.read()
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break
-        image = find_largest_rectangle(frame)
-        cv2.imshow('frame',image)
-        if cv2.waitKey(10) == ord('s'):
-            break
-        if cv2.waitKey(10) == ord('q'):
-            message = generate_output(frame)
-            print(message)
+        message = generate_output(frame)
+        store_sample.append(message)
+    output = conclusion_output(store_sample)
+    print(output)
     cap.release()
     cv2.destroyAllWindows()
 
