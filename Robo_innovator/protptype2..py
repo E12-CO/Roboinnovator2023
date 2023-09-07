@@ -136,7 +136,7 @@ def Area(img):
     contours, _ = cv2.findContours(
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    i = 0
+    i = 0 
     # list for storing names of shapes
     for contour in contours:
     
@@ -247,6 +247,12 @@ def conclusion_output(samples):
     store_shape = [int(outputlist[0][1]),int(outputlist[1][1]),int(outputlist[2][1]),int(outputlist[3][1]),int(outputlist[4][1])]
     store_text = []
     stored_data = [store_bin,store_shape,store_text]
+    # print(store_shape)
+    for i in range(len(store_shape)):
+        for j in range(len(store_shape)) : 
+            if store_shape[j] != -1 and store_shape[i] == store_shape[j] and i != j:
+                store_shape[i] = random.randint(500,1000)
+    # print(store_shape)
     for room in range(len(outputlist)):
         for task in range(len(outputlist[room])):
             if outputlist[room][task] not in "12345" and task == 0 :
@@ -271,8 +277,10 @@ def conclusion_output(samples):
                         outputlist[room][task] = str(random.randint(1,5))
                     store_text.append(outputlist[room][task])
     arealist = [int(e) for e in store_shape]
+    # print(arealist)
     while -1 in arealist :
         arealist.remove(-1)
+    # print(arealist)
     shape = classify_shape(arealist)
     for i in range(5):
         outputlist[i][1] = shape[i]
@@ -284,6 +292,17 @@ def conclusion_output(samples):
         if inx != len(outputlist)-1 :
                 output += ','
     return output
+def sort_order(first_row, second_row,third_row):
+    text = ""
+    index = [int(e) for e in third_row] # third row
+    combined_lists = zip(first_row, second_row,third_row,index)
+    sorted_tuples = sorted(combined_lists,key=lambda x:x[3])
+    sorted_list1, sorted_list2, sorted_list3,index_sort = zip(*sorted_tuples)
+    for i in range(5):
+        text += str(sorted_list1[i]) + ' ' + str(sorted_list2[i]) + ' ' + str(sorted_list3[i])
+        if i != 4 :
+            text += ','
+    return text
 def main():
     cap = cv2.VideoCapture(0)
     cap.set(3,640)
@@ -292,19 +311,32 @@ def main():
     time = 0
     store_sample = []
     pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-    while cap.isOpened() and count < 5:
+    # cap.isOpened() and
+    while  cap.isOpened() and count < 5:
         count += 1
         time = int(round(t.time() * 1000))
         while int(round(t.time()*1000)) - time < 3000 :
             pass
-        ret, frame = cap.read()
+        ret,frame = cap.read()
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break
         message = generate_output(frame)
         store_sample.append(message)
     output = conclusion_output(store_sample)
+    boxes = output.split(',')
+    list1 = []
+    list2 = []
+    list3 = []
+    for box in boxes:
+        element = box.split(' ')
+        list1.append(element[0])
+        list2.append(element[1])
+        list3.append(element[2])
+
     print(output)
+    absoluste = sort_order(list1,list2,list3)
+    print(absoluste)
     cap.release()
     cv2.destroyAllWindows()
 

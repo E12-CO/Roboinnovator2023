@@ -258,7 +258,7 @@ def main():
         erodeiter_text = cv2.getTrackbarPos('erodeiter_text', 'img')
         kernelsize_text = cv2.getTrackbarPos('kernelsize_text', 'img')
         threshold_text = cv2.getTrackbarPos('threshold_text', 'img')
-        image_path = 'images/sample0.png'
+        image_path = 'images/board.png'
         image = cv2.imread(image_path)
         images = [0]*12
         canvas = show_tunning(image,images,indeximage,area_largest,epsilon_largest,canny_largest,canny2_largest,kernelsize_bin,minraduis_bin,maxraduis_bin,theshold_area,minArea_area,maxAera_area,erodeiter_text,kernelsize_text,threshold_text)
